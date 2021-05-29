@@ -1,0 +1,32 @@
+- hosts: all
+  tasks:
+  - name: Ansible delete files older than 3 days
+    find:
+      path: /tmp
+      age: 3d
+    register: files_to_delete
+  - name : size
+    shell: |
+     find /tmp -mtime 3 -type f  -exec du -k {} \; | awk '{total+=$1}END{print "TOTAL" total/1024}'
+    register: size
+
+  - name: Ansible remove files older than 3 days
+    file:
+      path: "{{ item.path }}"
+      state: absent
+    with_items: "{{ files_to_delete.files }}"
+    register: deleted_files
+  - name : files not deleted 
+    shell: |
+     find /tmp -mtime 3 -type f -exec ls -ll {} \;|awk '{print $9}' 
+    register: out
+
+  - debug:
+      msg:
+      - "Size saved {{ size.stdout_lines }}"
+      - "List of files not deleted {{ out.stdout_lines }}"
+      - "List of files deleted {{ deleted_files }}"
+  - debug:
+      var: "{{ deleted_files | length }}"
+      
+
