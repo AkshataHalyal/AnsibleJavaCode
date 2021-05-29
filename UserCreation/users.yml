@@ -1,0 +1,33 @@
+- hosts: all
+  become: yes
+  vars_files:
+   - ./user_list.yml
+   - ./secret.yml
+  tasks:
+    - name: Group Check
+      group:
+        name: wheel
+        state: present
+    - name: User Creation
+      user:
+        name: "{{ item.username }}"
+        group: wheel
+        password: "{{ user_password | password_hash('sha512') }}"
+        shell: /bin/bash
+        update_password: on_create
+      with_items: "{{ users }}"
+      when:
+        - ansible_fqdn in groups['webservers']
+        - "item.uid|string|first == '1'"
+    - name: DB user Creation
+      user:
+        name: "{{ item.username }}"
+        group: wheel
+        password:  "{{ user_password | password_hash('sha512') }}"
+        shell: /bin/bash
+        uid: "{{ item.uid }}"
+        update_password: on_create
+      with_items: "{{ users }}"
+      when:
+        -  ansible_fqdn in groups['database']
+        - "item.uid|string|first == '2'"
